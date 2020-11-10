@@ -1,0 +1,27 @@
+{
+  "name": "tamarillo-fuse",
+  "version": "0.0.1",
+  "description": "A FUSE wrapper for filesystem",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "mocha tests",
+    "start": "./src/index.js"
+  },
+  "prettier": {
+    "tabWidth": 4,
+    "semi": true,
+    "singleQuote": true,
+    "arrowParens": "avoid"
+  },
+  "author": "Atreya Bain",
+  "license": "MIT",
+  "dependencies": {
+    "fuse-native": "^2.2.6"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.2.14",
+    "@types/node": "^14.14.6",
+    "chai": "^4.2.0",
+    "mocha": "^8.2.1"
+  }
+}

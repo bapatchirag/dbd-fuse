@@ -114,3 +114,9 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Mounted FS
+mnt/
+
+# Example FUSE
+src/example.js

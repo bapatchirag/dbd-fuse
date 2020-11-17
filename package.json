@@ -16,7 +16,9 @@
   "author": "Atreya Bain",
   "license": "MIT",
   "dependencies": {
-    "fuse-native": "^2.2.6"
+    "axios": "^0.21.0",
+    "fuse-native": "^2.2.6",
+    "yargs": "^13.3.2"
   },
   "devDependencies": {
     "@types/chai": "^4.2.14",

@@ -4,13 +4,13 @@ const fuseops = require('./fsops')
 const ops = {
     readdir: (path, cb) => {
         console.log('readdir on ' + path)
-        const readdirResponse = fuseops.readdir(path)
-        if(readdirResponse.ok === true) {
-            return process.nextTick(cb, 0, readdirResponse.data.contents)
-        }
-        else {
+        
+        fuseops.readdir(path).then(response => {
+            return process.nextTick(cb, 0, response.data.contents)
+        }).catch(err => {
+            console.log(err)
             return process.nextTick(cb, Fuse.ENOENT)
-        }
+        })    
     }
 }
 

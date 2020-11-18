@@ -9,14 +9,13 @@ const axiosConfig = axios.create({
 })
 
 /**
- * @typedef {{ok:boolean, contents:Array<string>}} readdirRes
- * @typedef {{ok:boolean, status:string}} badResponse
+ * @typedef {{ok:boolean, status:string, data:Object}} response
  */
 
 /**
  * Reads directory from path given
  * @param {string} path Directory path to be read
- * @returns {readdirRes | badResponse} Response object
+ * @returns {response} Response object
  */
 const readdir = async (path) => {
     try {

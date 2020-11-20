@@ -50,10 +50,35 @@ const ops = {
                 }
             });
     },
-    // TODO: fake function
     open: function (path, flags, cb) {
         console.log('I>open(%s, %d)', path, flags);
-        return process.nextTick(cb, 0, 42); // 42 is an fd
+        fuseops
+            .open(path, flags)
+            .then(response => {
+                return process.nextTick(cb, 0, response);
+            })
+            .catch(err => {
+                if (err instanceof FSError) {
+                    return process.nextTick(cb, err.errno);
+                } else {
+                    return process.nextTick(cb, Fuse.EFAULT);
+                }
+            });
+    },
+    close: function (path, fd, cb) {
+        console.log('I>close(%s, %d)', path, fd);
+        fuseops
+            .close(path, fd)
+            .then(() => {
+                return process.nextTick(cb, 0);
+            })
+            .catch(err => {
+                if (err instanceof FSError) {
+                    return process.nextTick(cb, err.errno);
+                } else {
+                    return process.nextTick(cb, Fuse.EFAULT);
+                }
+            });
     },
 };
 

@@ -103,6 +103,49 @@ async function getattr(path) {
     }
 }
 
+async function open(path, flags){
+    try {
+        const response = await axios.post(baseURL + '/api/file/open', {
+            path,
+            operation: flags
+        });
+        const fd = response.data.result;
+        return parseInt(fd);
+    } catch (err) {
+        // need to throw errors here, so they are caught upstream by the readdir function
+        if ((err && err.response && err.response.status) === 404) {
+            throw new FSError('Folder not found');
+        } else if ((err && err.response && err.response.status) === 403) {
+            throw new FSError('No perms', EPERM);
+        } else {
+            console.log('E>', err.message || 'error');
+            throw new FSError('General error', ECONNREFUSED);
+            //return { ok: false, status: 'Undefined' };
+        }
+    }
+}
+
+async function close(path, fd){
+    try {
+        const response = await axios.post(baseURL + '/api/file/close', {
+            path,
+            fd
+        });
+        
+    } catch (err) {
+        // need to throw errors here, so they are caught upstream by the readdir function
+        if ((err && err.response && err.response.status) === 404) {
+            throw new FSError('Folder not found');
+        } else if ((err && err.response && err.response.status) === 403) {
+            throw new FSError('No perms', EPERM);
+        } else {
+            console.log('E>', err.message || 'error');
+            throw new FSError('General error', ECONNREFUSED);
+            //return { ok: false, status: 'Undefined' };
+        }
+    }
+}
+
 /**
  * Do not include this function as an operation. This is meant to login and receive the cookie.
  */
@@ -120,6 +163,9 @@ async function init() {
     }
 }
 
+/**
+ * Do not include this function as an operation. This is meant to clean up the cookie and logout.
+ */
 async function deinit() {
     try {
         const response = await axios.post(baseURL + '/api/auth/logout', {
@@ -131,4 +177,4 @@ async function deinit() {
     }
 }
 
-module.exports = { readdir, init, getattr,deinit };
+module.exports = { readdir, init, getattr,open,close,deinit };

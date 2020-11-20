@@ -48,7 +48,7 @@ const readdir = async path => {
                     ctime: new Date(),
                     nlink: 1,
                     size: 42,
-                    mode: (e.type === 'folder') * 040000 + e.permissions,
+                    mode: ((e.type === 'folder')? 0o40000:0o100000) + e.permissions,
                     uid: process.getuid ? process.getuid() : 0,
                     gid: process.getgid ? process.getgid() : 0,
                 };
@@ -56,17 +56,52 @@ const readdir = async path => {
         };
     } catch (err) {
         // need to throw errors here, so they are caught upstream by the readdir function
-        console.log('E>', err.message || 'error');
         if ((err && err.response && err.response.status) === 404) {
             throw new FSError('Folder not found');
         } else if ((err && err.response && err.response.status) === 403) {
             throw new FSError('No perms', EPERM);
         } else {
+            console.log('E>', err.message || 'error');
             throw new FSError('General error', ECONNREFUSED);
             //return { ok: false, status: 'Undefined' };
         }
     }
 };
+
+/**
+ *
+ * @param {string} path
+ */
+async function getattr(path) {
+    try {
+        const response = await axios.post(baseURL + '/api/general/getattr', {
+            path: path,
+        });
+        console.log(response.data);
+        const { type, permissions } = response.data.stat;
+        return {
+            mtime: new Date(),
+            atime: new Date(),
+            ctime: new Date(),
+            nlink: 1,
+            size: 42,
+            mode: ((type === 'folder') ? 0o40000:0o100000) + permissions,
+            uid: process.getuid ? process.getuid() : 0,
+            gid: process.getgid ? process.getgid() : 0,
+        };
+    } catch (err) {
+        // need to throw errors here, so they are caught upstream by the readdir function
+        if ((err && err.response && err.response.status) === 404) {
+            throw new FSError('Folder not found');
+        } else if ((err && err.response && err.response.status) === 403) {
+            throw new FSError('No perms', EPERM);
+        } else {
+            console.log('E>', err.message || 'error');
+            throw new FSError('General error', ECONNREFUSED);
+            //return { ok: false, status: 'Undefined' };
+        }
+    }
+}
 
 /**
  * Do not include this function as an operation. This is meant to login and receive the cookie.
@@ -85,4 +120,15 @@ async function init() {
     }
 }
 
-module.exports = { readdir, init };
+async function deinit() {
+    try {
+        const response = await axios.post(baseURL + '/api/auth/logout', {
+            email: process.env.FUSEEMAIL,
+            pwd: process.env.FUSEPWD,
+        });
+    } catch(e) {
+        console.error('E> failed to logout:',e);
+    }
+}
+
+module.exports = { readdir, init, getattr,deinit };

@@ -17,13 +17,13 @@ let pathToMount = process.argv[2] || './mnt';
 
 const ops = {
     readdir: (path, cb) => {
-        console.log('I>readdir', path);
+        // console.log('I>readdir', path);
 
         fuseops
             .readdir(path)
             .then(response => {
-                
-                return process.nextTick(cb, 0, response.contents,response.contexts);
+                const { contents, contexts } = response;
+                return process.nextTick(cb, 0, contents, contexts);
             })
             .catch(err => {
                 if (err instanceof FSError) {
@@ -35,6 +35,26 @@ const ops = {
                 // return process.nextTick(cb, Fuse.ENOENT)
             });
     },
+    getattr: (path, cb) => {
+        // console.log('I>getattr', path);
+        fuseops
+            .getattr(path)
+            .then(response => {
+                return process.nextTick(cb, 0, response);
+            })
+            .catch(err => {
+                if (err instanceof FSError) {
+                    return process.nextTick(cb, err.errno);
+                } else {
+                    return process.nextTick(cb, Fuse.EFAULT);
+                }
+            });
+    },
+    // TODO: fake function
+    open: function (path, flags, cb) {
+        console.log('I>open(%s, %d)', path, flags);
+        return process.nextTick(cb, 0, 42); // 42 is an fd
+    },
 };
 
 const fuse = new Fuse('./mnt', ops, { debug: true, displayFolder: true });
@@ -42,28 +62,28 @@ const fuse = new Fuse('./mnt', ops, { debug: true, displayFolder: true });
 /**
  * Mount FUSE
  */
-fuseops.init().then(()=>{
-    fuse.mount(err => {
-        if (err) {
-            throw err;
+fuseops
+    .init()
+    .then(() => {
+        fuse.mount(err => {
+            if (err) {
+                throw err;
+            }
+
+            console.log('FS mounted at ' + fuse.mnt);
+        });
+    })
+    .catch(err => {
+        if (err instanceof FSError) {
+            console.log('could not mount with error ', err.errno);
+            process.exit(1);
+            // return process.nextTick(cb, err.errno);
+        } else {
+            console.log('E>could not mount, general error:', err);
+            process.exit(1);
+            // return process.nextTick(cb, Fuse.EFAULT);
         }
-    
-        console.log('FS mounted at ' + fuse.mnt);
     });
-}).catch(err=>{
-    if (err instanceof FSError) {
-        console.log('could not mount with error ',err.errno);
-        process.exit(1)
-        // return process.nextTick(cb, err.errno);
-
-    } else {
-        console.log('E>could not mount, general error:',err);
-        process.exit(1)
-        // return process.nextTick(cb, Fuse.EFAULT);
-    }
-})
-
-
 
 /**
  * Unmount FUSE on SIGINT
@@ -74,9 +94,11 @@ process.once('SIGINT', () => {
             console.log(
                 '\nFS at ' + fuse.mnt + ' could not be unmounted: ' + err
             );
+            return;
         }
-
+        fuseops.deinit().then(() => {
+            console.log('I>Logged out');
+        });
         console.log('\nFS at ' + fuse.mnt + ' successfully unmounted');
     });
 });
-

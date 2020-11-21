@@ -65,7 +65,7 @@ const ops = {
                 }
             });
     },
-    close: function (path, fd, cb) {
+    release: function (path, fd, cb) {
         console.log('I>close(%s, %d)', path, fd);
         fuseops
             .close(path, fd)
@@ -80,6 +80,21 @@ const ops = {
                 }
             });
     },
+    chmod: function (path,mode,cb){
+        console.log('I>chmod(%s, %d)', path, mode);
+        fuseops
+            .chmod(path,mode)
+            .then(() => {
+                return process.nextTick(cb, 0);
+            })
+            .catch(err => {
+                if (err instanceof FSError) {
+                    return process.nextTick(cb, err.errno);
+                } else {
+                    return process.nextTick(cb, Fuse.EFAULT);
+                }
+            });
+    }
 };
 
 const fuse = new Fuse('./mnt', ops, { debug: true, displayFolder: true });

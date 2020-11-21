@@ -5,6 +5,7 @@
   "main": "src/index.js",
   "scripts": {
     "test": "mocha tests",
+    "dev": "node --inspect-brk src",
     "start": "./src/index.js"
   },
   "prettier": {
@@ -17,13 +18,18 @@
   "license": "MIT",
   "dependencies": {
     "axios": "^0.21.0",
+    "axios-cookiejar-support": "^1.0.1",
     "fuse-native": "^2.2.6",
+    "tough-cookie": "^4.0.0",
     "yargs": "^13.3.2"
   },
   "devDependencies": {
     "@types/chai": "^4.2.14",
     "@types/node": "^14.14.6",
+    "@types/tough-cookie": "^4.0.0",
+    "@types/yargs": "^15.0.10",
     "chai": "^4.2.0",
+    "dotenv": "^8.2.0",
     "mocha": "^8.2.1"
   }
 }

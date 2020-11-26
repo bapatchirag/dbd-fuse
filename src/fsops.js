@@ -239,7 +239,7 @@ async function deinit() {
             pwd: process.env.FUSEPWD,
         });
     } catch(e) {
-        console.error('E> failed to logout:',e);
+        console.error('E> failed to logout');
     }
 }
 

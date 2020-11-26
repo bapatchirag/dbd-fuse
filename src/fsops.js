@@ -40,8 +40,8 @@ const readdir = async path => {
         });
 
         return {
-            contents: response.data.contents.map(e => e.name),
-            contexts: response.data.contents.map(e => {
+            contents: response.data.contents//.map(e =>e.name) //,
+            /*contexts: response.data.contents.map(e => {
                 return {
                     mtime: new Date(),
                     atime: new Date(),
@@ -52,7 +52,7 @@ const readdir = async path => {
                     uid: process.getuid ? process.getuid() : 0,
                     gid: process.getgid ? process.getgid() : 0,
                 };
-            }),
+            }),*/
         };
     } catch (err) {
         // need to throw errors here, so they are caught upstream by the readdir function
@@ -78,13 +78,13 @@ async function getattr(path) {
             path: path,
         });
         // console.log(response.data);
-        const { type, permissions } = response.data.stat;
+        const { type, permissions,size } = response.data.stat;
         return {
             mtime: new Date(),
             atime: new Date(),
             ctime: new Date(),
             nlink: 1,
-            size: 42,
+            size: response.data.stat.size===undefined?42:response.data.stat.size,
             mode: ((type === 'folder') ? 0o40000:0o100000) + permissions,
             uid: process.getuid ? process.getuid() : 0,
             gid: process.getgid ? process.getgid() : 0,
@@ -112,6 +112,7 @@ async function open(path, flags){
         const fd = response.data.result;
         return parseInt(fd);
     } catch (err) {
+        // console.log(err.response)
         // need to throw errors here, so they are caught upstream by the readdir function
         if ((err && err.response && err.response.status) === 404) {
             throw new FSError('Folder not found');
@@ -193,6 +194,41 @@ async function init() {
     }
 }
 
+// read a file. it will also write to the buffer buf before returning
+async function read(path,fd,buf,len,pos){
+    try{
+        console.log('tried to read',fd,len,pos);
+        const response = await axios.post(baseURL+ '/api/file/read',{
+            fd,
+            length:len,
+            position:pos
+        })
+        buf.write(response.data);
+        console.log('R>',response.data,'Size:',response.data.length);
+        return response.data.length
+
+        // const str = 'hello world olsduhirfgds s;ofdlguihsdg o;srgihso;lgih o;sihg so;geihosiuheg so;egih s ego;ish'.slice(pos, pos + len);
+        // if (!str) return 0
+        // buf.write(str)
+        // return str.length;
+
+    }catch (err) {
+        // console.log(err.response);
+        // need to throw errors here, so they are caught upstream by the readdir function
+        if ((err && err.response && err.response.status) === 404) {
+            throw new FSError('Folder not found');
+        } else if ((err && err.response && err.response.status) === 403) {
+            throw new FSError('No perms', EPERM);
+        } else if((err && err.response && err.response.status) === 401){
+            throw new FSError('No perms', EPERM);
+        }else {
+            console.log('E>', err.message || 'error');
+            throw new FSError('General error', ECONNREFUSED);
+            //return { ok: false, status: 'Undefined' };
+        }
+    }
+}
+
 /**
  * Do not include this function as an operation. This is meant to clean up the cookie and logout.
  */
@@ -207,4 +243,4 @@ async function deinit() {
     }
 }
 
-module.exports = { readdir, init, getattr,open,close,chmod,deinit };
+module.exports = { readdir, init, getattr,open,close,chmod,read,deinit };

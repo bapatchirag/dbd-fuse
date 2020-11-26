@@ -3,6 +3,7 @@ const Fuse = require('fuse-native');
 const fuseops = require('./fsops');
 const path = require('path');
 const FSError = require('./misc/FSError');
+const { O_RDONLY } = require('constants');
 
 try {
     const dotenv = require('dotenv');
@@ -11,19 +12,20 @@ try {
     console.log('I> did not set env vars');
 }
 
-console.log(process.argv);
+// console.log(process.argv);
 
 let pathToMount = process.argv[2] || './mnt';
 
 const ops = {
     readdir: (path, cb) => {
         // console.log('I>readdir', path);
+        
 
         fuseops
             .readdir(path)
             .then(response => {
                 const { contents, contexts } = response;
-                return process.nextTick(cb, 0, contents, contexts);
+                return process.nextTick(cb, 0, contents, /*contexts*/);
             })
             .catch(err => {
                 if (err instanceof FSError) {
@@ -94,10 +96,25 @@ const ops = {
                     return process.nextTick(cb, Fuse.EFAULT);
                 }
             });
+    },
+    read: function (path,fd,buf,len,pos,cb){
+        // const str = 'hello world olsduhirfgds s;ofdlguihsdg o;srgihso;lgih o;sihg so;geihosiuheg so;egih s ego;ish'.slice(pos, pos + len);
+        // if (!str) return cb(0)
+        //     buf.write(str)
+        // return cb(str.length)
+        fuseops.read(path,fd,buf,len,pos).then(e=>{
+            return process.nextTick(cb,e);
+        }).catch(err=>{
+            if (err instanceof FSError) {
+                return process.nextTick(cb, err.errno);
+            } else {
+                return process.nextTick(cb, Fuse.EFAULT);
+            }
+        })
     }
 };
 
-const fuse = new Fuse('./mnt', ops, { debug: true, displayFolder: true });
+const fuse = new Fuse('./mnt', ops, { debug: process.env.FUSEDEBUG==='true', displayFolder: true });
 
 /**
  * Mount FUSE

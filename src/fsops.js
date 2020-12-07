@@ -204,7 +204,7 @@ async function read(path,fd,buf,len,pos){
             position:pos
         })
         buf.write(response.data);
-        console.log('R>',response.data,'Size:',response.data.length);
+        console.log('R>Size:',response.data.length);
         return response.data.length
 
 
@@ -259,6 +259,41 @@ async function create(path,mode){
 }
 
 /**
+ * Create file
+ * @param {string} path 
+ * @param {number} mode 
+ */
+async function mkdir(path,mode){
+    try {
+        const response = await axios.post(baseURL + '/api/folder/create', {
+            path,
+            permissions: mode
+        });
+        // console.log(response.data);
+        const newId = parseInt(response.data.inserted);
+        if(isNaN(newId)||newId<1){
+            throw new FSError('no perm',EPERM)
+        }
+        return newId;
+    } catch (err) {
+        // need to throw errors here, so they are caught upstream by the readdir function
+        if ((err && err.response && err.response.status) === 404) {
+            throw new FSError('Folder not found');
+        } else if ((err && err.response && err.response.status) === 403) {
+            throw new FSError('No perms', EPERM);
+        } else if((err && err.response && err.response.status) === 401){
+            throw new FSError('No perms', EPERM);
+        }else {
+            console.log('E>', err.message || 'error');
+            throw new FSError('General error', ECONNREFUSED);
+            //return { ok: false, status: 'Undefined' };
+        }
+    }
+}
+
+
+
+/**
  * Do not include this function as an operation. This is meant to clean up the cookie and logout.
  */
 async function deinit() {
@@ -272,4 +307,4 @@ async function deinit() {
     }
 }
 
-module.exports = { readdir, init, getattr,open,close,chmod,read,create,deinit };
+module.exports = { readdir, init, getattr,open,close,chmod,read,create,mkdir,deinit };

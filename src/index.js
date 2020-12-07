@@ -128,6 +128,22 @@ const ops = {
     utimens: (path, atime, mtime, cb)=>{
         console.log('I>changetimes(faking)',path,atime,mtime);
         return process.nextTick(cb,0);
+    },
+    mkdir:(path, mode, cb)=>{
+        console.log('I>mkdir(%s,%d)',path,mode);
+        fuseops
+            .mkdir(path,mode)
+            .then(() => {
+                return process.nextTick(cb, 0);
+            })
+            .catch(err => {
+                if (err instanceof FSError) {
+                    return process.nextTick(cb, err.errno);
+                } else {
+                    return process.nextTick(cb, Fuse.EFAULT);
+                }
+            });
+
     }
 };
 

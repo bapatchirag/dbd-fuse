@@ -121,11 +121,10 @@ const ops = {
                     return process.nextTick(cb, Fuse.EFAULT);
                 }
             });
-
         // return process.nextTick(cb,Fuse.EHOSTUNREACH)
     },
-    //dummy function
     utimens: (path, atime, mtime, cb)=>{
+        //dummy function
         console.log('I>changetimes(faking)',path,atime,mtime);
         return process.nextTick(cb,0);
     },
@@ -144,6 +143,21 @@ const ops = {
                 }
             });
 
+    },
+    rename:(src, dest, cb)=>{
+        console.log('I>rename(%s,%s)',src,dest);
+        fuseops
+            .rename(src,dest)
+            .then(() => {
+                return process.nextTick(cb, 0);
+            })
+            .catch(err => {
+                if (err instanceof FSError) {
+                    return process.nextTick(cb, err.errno);
+                } else {
+                    return process.nextTick(cb, Fuse.EFAULT);
+                }
+            });
     }
 };
 

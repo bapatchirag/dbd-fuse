@@ -18,9 +18,7 @@ let pathToMount = process.argv[2] || './mnt';
 
 const ops = {
     readdir: (path, cb) => {
-        // console.log('I>readdir', path);
-        
-
+        console.log('I>readdir', path);
         fuseops
             .readdir(path)
             .then(response => {
@@ -98,10 +96,7 @@ const ops = {
             });
     },
     read: function (path,fd,buf,len,pos,cb){
-        // const str = 'hello world olsduhirfgds s;ofdlguihsdg o;srgihso;lgih o;sihg so;geihosiuheg so;egih s ego;ish'.slice(pos, pos + len);
-        // if (!str) return cb(0)
-        //     buf.write(str)
-        // return cb(str.length)
+        console.log('I>read(%s,%d)',path,fd);
         fuseops.read(path,fd,buf,len,pos).then(e=>{
             return process.nextTick(cb,e);
         }).catch(err=>{
@@ -111,6 +106,28 @@ const ops = {
                 return process.nextTick(cb, Fuse.EFAULT);
             }
         })
+    },
+    create: function(path,mode,cb){
+        console.log('I>create(%s,%d)',path,mode)
+        fuseops
+            .create(path,mode)
+            .then(() => {
+                return process.nextTick(cb, 0);
+            })
+            .catch(err => {
+                if (err instanceof FSError) {
+                    return process.nextTick(cb, err.errno);
+                } else {
+                    return process.nextTick(cb, Fuse.EFAULT);
+                }
+            });
+
+        // return process.nextTick(cb,Fuse.EHOSTUNREACH)
+    },
+    //dummy function
+    utimens: (path, atime, mtime, cb)=>{
+        console.log('I>changetimes(faking)',path,atime,mtime);
+        return process.nextTick(cb,0);
     }
 };
 

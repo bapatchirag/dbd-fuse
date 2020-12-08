@@ -158,6 +158,21 @@ const ops = {
                     return process.nextTick(cb, Fuse.EFAULT);
                 }
             });
+    },
+    rmdir:(pathstr,cb)=>{
+        console.log('I>rmdir(%s)',pathstr);
+        fuseops
+            .rmdir(pathstr)
+            .then(() => {
+                return process.nextTick(cb, 0);
+            })
+            .catch(err => {
+                if (err instanceof FSError) {
+                    return process.nextTick(cb, err.errno);
+                } else {
+                    return process.nextTick(cb, Fuse.EFAULT);
+                }
+            });
     }
 };
 

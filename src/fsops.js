@@ -322,6 +322,38 @@ async function rename(src,dest){
     }
 }
 
+
+/**
+ * Rename file
+ * @param {string} pathStr
+ */
+async function rmdir(pathStr){
+    try {
+        const response = await axios.post(baseURL + '/api/folder/remove', {
+            path:pathStr
+        });
+        const change = parseInt(response.data.changed);
+        if(change<1){
+            throw new FSError('no perm',EPERM)
+        }
+        return change;
+    } catch (err) {
+        // need to throw errors here, so they are caught upstream by the readdir function
+        if ((err && err.response && err.response.status) === 404) {
+            throw new FSError('Folder not found');
+        } else if ((err && err.response && err.response.status) === 403) {
+            throw new FSError('No perms', EPERM);
+        } else if((err && err.response && err.response.status) === 401){
+            throw new FSError('No perms', EPERM);
+        }else {
+            console.log('E>', err.message || 'error');
+            throw new FSError('General error', ECONNREFUSED);
+            //return { ok: false, status: 'Undefined' };
+        }
+    }
+}
+
+
 /**
  * Do not include this function as an operation. This is meant to clean up the cookie and logout.
  */
@@ -336,4 +368,4 @@ async function deinit() {
     }
 }
 
-module.exports = { readdir, init, getattr,open,close,chmod,read,create,mkdir,rename,deinit };
+module.exports = { readdir, init, getattr,open,close,chmod,read,create,mkdir,rename, rmdir,deinit };

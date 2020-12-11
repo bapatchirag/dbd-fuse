@@ -6,7 +6,8 @@
   "scripts": {
     "test": "mocha tests",
     "dev": "node --inspect-brk src",
-    "start": "./src/index.js"
+    "start": "./src/index.js",
+    "unmount":"fusermount -u mnt"
   },
   "prettier": {
     "tabWidth": 4,
@@ -19,6 +20,7 @@
   "dependencies": {
     "axios": "^0.21.0",
     "axios-cookiejar-support": "^1.0.1",
+    "form-data": "^3.0.0",
     "fuse-native": "^2.2.6",
     "tough-cookie": "^4.0.0",
     "yargs": "^13.3.2"

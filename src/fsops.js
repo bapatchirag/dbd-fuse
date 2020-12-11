@@ -1,3 +1,4 @@
+//@ts-check
 // This file wraps and returns the data
 // if error, it wraps and throws the appropriate callback error
 
@@ -5,6 +6,7 @@ const { config } = require('process');
 const FSError = require('./misc/FSError');
 const axios = require('axios').default;
 const axiosCookieJarSupport = require('axios-cookiejar-support').default;
+const formData = require('form-data');
 const tough = require('tough-cookie');
 const { ECONNREFUSED, EPERM } = require('fuse-native');
 
@@ -31,7 +33,7 @@ const baseURL = 'http://localhost:8081';
 /**
  * Reads directory from path given
  * @param {string} path Directory path to be read
- * @returns {response} Response object
+ * @returns {Promise<{contents:string[]}>} Response object
  */
 const readdir = async path => {
     try {
@@ -40,19 +42,7 @@ const readdir = async path => {
         });
 
         return {
-            contents: response.data.contents//.map(e =>e.name) //,
-            /*contexts: response.data.contents.map(e => {
-                return {
-                    mtime: new Date(),
-                    atime: new Date(),
-                    ctime: new Date(),
-                    nlink: 1,
-                    size: 42,
-                    mode: ((e.type === 'folder')? 0o40000:0o100000) + e.permissions,
-                    uid: process.getuid ? process.getuid() : 0,
-                    gid: process.getgid ? process.getgid() : 0,
-                };
-            }),*/
+            contents: response.data.contents,
         };
     } catch (err) {
         // need to throw errors here, so they are caught upstream by the readdir function
@@ -78,14 +68,17 @@ async function getattr(path) {
             path: path,
         });
         // console.log(response.data);
-        const { type, permissions,size } = response.data.stat;
+        const { type, permissions, size } = response.data.stat;
         return {
             mtime: new Date(),
             atime: new Date(),
             ctime: new Date(),
             nlink: 1,
-            size: response.data.stat.size===undefined?42:response.data.stat.size,
-            mode: ((type === 'folder') ? 0o40000:0o100000) + permissions,
+            size:
+                response.data.stat.size === undefined
+                    ? 42
+                    : response.data.stat.size,
+            mode: (type === 'folder' ? 0o40000 : 0o100000) + permissions,
             uid: process.getuid ? process.getuid() : 0,
             gid: process.getgid ? process.getgid() : 0,
         };
@@ -103,11 +96,11 @@ async function getattr(path) {
     }
 }
 
-async function open(path, flags){
+async function open(path, flags) {
     try {
         const response = await axios.post(baseURL + '/api/file/open', {
             path,
-            operation: flags
+            operation: flags,
         });
         const fd = response.data.result;
         return parseInt(fd);
@@ -126,13 +119,12 @@ async function open(path, flags){
     }
 }
 
-async function close(path, fd){
+async function close(path, fd) {
     try {
-        const response = await axios.post(baseURL + '/api/file/close', {
+        const response = await axios.post(baseURL + '/api/file/release', {
             path,
-            fd
+            fd,
         });
-        
     } catch (err) {
         // need to throw errors here, so they are caught upstream by the readdir function
         if ((err && err.response && err.response.status) === 404) {
@@ -147,16 +139,16 @@ async function close(path, fd){
     }
 }
 
-async function chmod(path, mode){
+async function chmod(path, mode) {
     try {
         const response = await axios.post(baseURL + '/api/general/chmod', {
             path,
-            permissions: mode
+            permissions: mode,
         });
         console.log(response.data);
         const change = parseInt(response.data.changed);
-        if(change<1){
-            throw new FSError('no perm',EPERM)
+        if (change < 1) {
+            throw new FSError('no perm', EPERM);
         }
         return change;
     } catch (err) {
@@ -165,17 +157,15 @@ async function chmod(path, mode){
             throw new FSError('Folder not found');
         } else if ((err && err.response && err.response.status) === 403) {
             throw new FSError('No perms', EPERM);
-        } else if((err && err.response && err.response.status) === 401){
+        } else if ((err && err.response && err.response.status) === 401) {
             throw new FSError('No perms', EPERM);
-        }else {
+        } else {
             console.log('E>', err.message || 'error');
             throw new FSError('General error', ECONNREFUSED);
             //return { ok: false, status: 'Undefined' };
         }
     }
 }
-
-
 
 /**
  * Do not include this function as an operation. This is meant to login and receive the cookie.
@@ -195,29 +185,27 @@ async function init() {
 }
 
 // read a file. it will also write to the buffer buf before returning
-async function read(path,fd,buf,len,pos){
-    try{
-        console.log('tried to read',fd,len,pos);
-        const response = await axios.post(baseURL+ '/api/file/read',{
+async function read(path, fd, buf, len, pos) {
+    try {
+        console.log('tried to read', fd, len, pos);
+        const response = await axios.post(baseURL + '/api/file/read', {
             fd,
-            length:len,
-            position:pos
-        })
+            length: len,
+            position: pos,
+        });
         buf.write(response.data);
-        console.log('R>Size:',response.data.length);
-        return response.data.length
-
-
-    }catch (err) {
+        console.log('R>Size:', response.data.length);
+        return response.data.length;
+    } catch (err) {
         // console.log(err.response);
         // need to throw errors here, so they are caught upstream by the readdir function
         if ((err && err.response && err.response.status) === 404) {
             throw new FSError('Folder not found');
         } else if ((err && err.response && err.response.status) === 403) {
             throw new FSError('No perms', EPERM);
-        } else if((err && err.response && err.response.status) === 401){
+        } else if ((err && err.response && err.response.status) === 401) {
             throw new FSError('No perms', EPERM);
-        }else {
+        } else {
             console.log('E>', err.message || 'error');
             throw new FSError('General error', ECONNREFUSED);
             //return { ok: false, status: 'Undefined' };
@@ -227,19 +215,19 @@ async function read(path,fd,buf,len,pos){
 
 /**
  * Create file
- * @param {string} path 
- * @param {number} mode 
+ * @param {string} path
+ * @param {number} mode
  */
-async function create(path,mode){
+async function create(path, mode) {
     try {
         const response = await axios.post(baseURL + '/api/file/create', {
             path,
-            permissions: mode
+            permissions: mode,
         });
         // console.log(response.data);
         const newId = parseInt(response.data.inserted);
-        if(isNaN(newId)||newId<1){
-            throw new FSError('no perm',EPERM)
+        if (isNaN(newId) || newId < 1) {
+            throw new FSError('no perm', EPERM);
         }
         return newId;
     } catch (err) {
@@ -248,9 +236,9 @@ async function create(path,mode){
             throw new FSError('Folder not found');
         } else if ((err && err.response && err.response.status) === 403) {
             throw new FSError('No perms', EPERM);
-        } else if((err && err.response && err.response.status) === 401){
+        } else if ((err && err.response && err.response.status) === 401) {
             throw new FSError('No perms', EPERM);
-        }else {
+        } else {
             console.log('E>', err.message || 'error');
             throw new FSError('General error', ECONNREFUSED);
             //return { ok: false, status: 'Undefined' };
@@ -260,19 +248,19 @@ async function create(path,mode){
 
 /**
  * Create file
- * @param {string} path 
- * @param {number} mode 
+ * @param {string} path
+ * @param {number} mode
  */
-async function mkdir(path,mode){
+async function mkdir(path, mode) {
     try {
         const response = await axios.post(baseURL + '/api/folder/create', {
             path,
-            permissions: mode
+            permissions: mode,
         });
         // console.log(response.data);
         const newId = parseInt(response.data.inserted);
-        if(isNaN(newId)||newId<1){
-            throw new FSError('no perm',EPERM)
+        if (isNaN(newId) || newId < 1) {
+            throw new FSError('no perm', EPERM);
         }
         return newId;
     } catch (err) {
@@ -281,9 +269,9 @@ async function mkdir(path,mode){
             throw new FSError('Folder not found');
         } else if ((err && err.response && err.response.status) === 403) {
             throw new FSError('No perms', EPERM);
-        } else if((err && err.response && err.response.status) === 401){
+        } else if ((err && err.response && err.response.status) === 401) {
             throw new FSError('No perms', EPERM);
-        }else {
+        } else {
             console.log('E>', err.message || 'error');
             throw new FSError('General error', ECONNREFUSED);
             //return { ok: false, status: 'Undefined' };
@@ -293,17 +281,18 @@ async function mkdir(path,mode){
 
 /**
  * Rename file
- * @param {string} src 
- * @param {string} dest 
+ * @param {string} src
+ * @param {string} dest
  */
-async function rename(src,dest){
+async function rename(src, dest) {
     try {
         const response = await axios.post(baseURL + '/api/general/rename', {
-            src,dest
+            src,
+            dest,
         });
         const change = parseInt(response.data.changed);
-        if(change<1){
-            throw new FSError('no perm',EPERM)
+        if (change < 1) {
+            throw new FSError('no perm', EPERM);
         }
         return change;
     } catch (err) {
@@ -312,29 +301,28 @@ async function rename(src,dest){
             throw new FSError('Folder not found');
         } else if ((err && err.response && err.response.status) === 403) {
             throw new FSError('No perms', EPERM);
-        } else if((err && err.response && err.response.status) === 401){
+        } else if ((err && err.response && err.response.status) === 401) {
             throw new FSError('No perms', EPERM);
-        }else {
+        } else {
             console.log('E>', err.message || 'error');
             throw new FSError('General error', ECONNREFUSED);
             //return { ok: false, status: 'Undefined' };
         }
     }
 }
-
 
 /**
  * Rename file
  * @param {string} pathStr
  */
-async function rmdir(pathStr){
+async function rmdir(pathStr) {
     try {
         const response = await axios.post(baseURL + '/api/folder/remove', {
-            path:pathStr
+            path: pathStr,
         });
         const change = parseInt(response.data.changed);
-        if(change<1){
-            throw new FSError('no perm',EPERM)
+        if (change < 1) {
+            throw new FSError('no perm', EPERM);
         }
         return change;
     } catch (err) {
@@ -343,9 +331,9 @@ async function rmdir(pathStr){
             throw new FSError('Folder not found');
         } else if ((err && err.response && err.response.status) === 403) {
             throw new FSError('No perms', EPERM);
-        } else if((err && err.response && err.response.status) === 401){
+        } else if ((err && err.response && err.response.status) === 401) {
             throw new FSError('No perms', EPERM);
-        }else {
+        } else {
             console.log('E>', err.message || 'error');
             throw new FSError('General error', ECONNREFUSED);
             //return { ok: false, status: 'Undefined' };
@@ -353,6 +341,106 @@ async function rmdir(pathStr){
     }
 }
 
+/**
+ * Write a file
+ * @param {number} fd
+ * @param {Buffer} buffer
+ * @param {number} length
+ * @param {number} position
+ * @return {Promise<number>}
+ */
+async function write(fd, buffer, length, position) {
+    try {
+        const response = await axios.post(baseURL + '/api/file/write', {
+            fd,
+            buffer: [...buffer],
+            length,
+            position,
+        });
+        // console.log('Wrote data',response.data);
+        return response.data.result;
+    } catch (err) {
+        console.log('I>Write error');
+        // need to throw errors here, so they are caught upstream by the readdir function
+        if ((err && err.response && err.response.status) === 404) {
+            throw new FSError('Folder not found');
+        } else if ((err && err.response && err.response.status) === 403) {
+            throw new FSError('No perms', EPERM);
+        } else if ((err && err.response && err.response.status) === 401) {
+            throw new FSError('No perms', EPERM);
+        } else {
+            console.log('E>', err.message || 'error');
+            throw new FSError('General error', ECONNREFUSED);
+            //return { ok: false, status: 'Undefined' };
+        }
+    }
+}
+
+/**
+ *
+ * @param {string} path
+ */
+async function unlink(path) {
+    try {
+        const response = await axios.post(baseURL + '/api/file/unlink', {
+            path,
+        });
+        console.log(response.data);
+        const change = parseInt(response.data.result);
+        // if (change < 1) {
+        //     throw new FSError('no perm', EPERM);
+        // }
+        return change;
+    } catch (err) {
+        console.log(err.response.status);
+        // need to throw errors here, so they are caught upstream by the readdir function
+        if ((err && err.response && err.response.status) === 404) {
+            throw new FSError('Folder not found');
+        } else if ((err && err.response && err.response.status) === 403) {
+            throw new FSError('No perms', EPERM);
+        } else if ((err && err.response && err.response.status) === 401) {
+            throw new FSError('No perms', EPERM);
+        } else {
+            console.log('E>', err.message || 'error');
+            throw new FSError('General error', ECONNREFUSED);
+            //return { ok: false, status: 'Undefined' };
+        }
+    }
+}
+
+/**
+ *
+ * @param {string} path
+ * @param {number} size
+ */
+async function truncate(path, size) {
+    try {
+        const response = await axios.post(baseURL + '/api/file/truncate', {
+            path,
+            size,
+        });
+        // console.log(response.data);
+        const change = parseInt(response.data.result);
+        // if (change < 1) {
+        //     throw new FSError('no perm', EPERM);
+        // }
+        return change;
+    } catch (err) {
+        console.log(err.response.status);
+        // need to throw errors here, so they are caught upstream by the readdir function
+        if ((err && err.response && err.response.status) === 404) {
+            throw new FSError('Folder not found');
+        } else if ((err && err.response && err.response.status) === 403) {
+            throw new FSError('No perms', EPERM);
+        } else if ((err && err.response && err.response.status) === 401) {
+            throw new FSError('No perms', EPERM);
+        } else {
+            console.log('E>', err.message || 'error');
+            throw new FSError('General error', ECONNREFUSED);
+            //return { ok: false, status: 'Undefined' };
+        }
+    }
+}
 
 /**
  * Do not include this function as an operation. This is meant to clean up the cookie and logout.
@@ -363,9 +451,25 @@ async function deinit() {
             email: process.env.FUSEEMAIL,
             pwd: process.env.FUSEPWD,
         });
-    } catch(e) {
+    } catch (e) {
         console.error('E> failed to logout');
     }
 }
 
-module.exports = { readdir, init, getattr,open,close,chmod,read,create,mkdir,rename, rmdir,deinit };
+module.exports = {
+    readdir,
+    init,
+    getattr,
+    open,
+    close,
+    chmod,
+    read,
+    create,
+    mkdir,
+    rename,
+    rmdir,
+    write,
+    unlink,
+    truncate,
+    deinit,
+};

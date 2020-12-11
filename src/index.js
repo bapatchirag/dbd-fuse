@@ -4,6 +4,7 @@ const fuseops = require('./fsops');
 const path = require('path');
 const FSError = require('./misc/FSError');
 const { O_RDONLY } = require('constants');
+const fsops = require('./fsops');
 
 try {
     const dotenv = require('dotenv');
@@ -23,7 +24,7 @@ const ops = {
             .readdir(path)
             .then(response => {
                 const { contents, contexts } = response;
-                return process.nextTick(cb, 0, contents, /*contexts*/);
+                return process.nextTick(cb, 0, contents /*contexts*/);
             })
             .catch(err => {
                 if (err instanceof FSError) {
@@ -50,7 +51,7 @@ const ops = {
                 }
             });
     },
-    open: function (path, flags, cb) {
+    open: (path, flags, cb) => {
         console.log('I>open(%s, %d)', path, flags);
         fuseops
             .open(path, flags)
@@ -65,7 +66,7 @@ const ops = {
                 }
             });
     },
-    release: function (path, fd, cb) {
+    release: (path, fd, cb) => {
         console.log('I>close(%s, %d)', path, fd);
         fuseops
             .close(path, fd)
@@ -80,10 +81,10 @@ const ops = {
                 }
             });
     },
-    chmod: function (path,mode,cb){
+    chmod: (path, mode, cb) => {
         console.log('I>chmod(%s, %d)', path, mode);
         fuseops
-            .chmod(path,mode)
+            .chmod(path, mode)
             .then(() => {
                 return process.nextTick(cb, 0);
             })
@@ -95,22 +96,25 @@ const ops = {
                 }
             });
     },
-    read: function (path,fd,buf,len,pos,cb){
-        console.log('I>read(%s,%d)',path,fd);
-        fuseops.read(path,fd,buf,len,pos).then(e=>{
-            return process.nextTick(cb,e);
-        }).catch(err=>{
-            if (err instanceof FSError) {
-                return process.nextTick(cb, err.errno);
-            } else {
-                return process.nextTick(cb, Fuse.EFAULT);
-            }
-        })
-    },
-    create: function(path,mode,cb){
-        console.log('I>create(%s,%d)',path,mode)
+    read: (path, fd, buf, len, pos, cb) => {
+        console.log('I>read(%s,%d)', path, fd);
         fuseops
-            .create(path,mode)
+            .read(path, fd, buf, len, pos)
+            .then(e => {
+                return process.nextTick(cb, e);
+            })
+            .catch(err => {
+                if (err instanceof FSError) {
+                    return process.nextTick(cb, err.errno);
+                } else {
+                    return process.nextTick(cb, Fuse.EFAULT);
+                }
+            });
+    },
+    create: (path, mode, cb) => {
+        console.log('I>create(%s,%d)', path, mode);
+        fuseops
+            .create(path, mode)
             .then(() => {
                 return process.nextTick(cb, 0);
             })
@@ -123,31 +127,15 @@ const ops = {
             });
         // return process.nextTick(cb,Fuse.EHOSTUNREACH)
     },
-    utimens: (path, atime, mtime, cb)=>{
+    utimens: (path, atime, mtime, cb) => {
         //dummy function
-        console.log('I>changetimes(faking)',path,atime,mtime);
-        return process.nextTick(cb,0);
+        console.log('I>changetimes(faking)', path, atime, mtime);
+        return process.nextTick(cb, 0);
     },
-    mkdir:(path, mode, cb)=>{
-        console.log('I>mkdir(%s,%d)',path,mode);
+    mkdir: (path, mode, cb) => {
+        console.log('I>mkdir(%s,%d)', path, mode);
         fuseops
-            .mkdir(path,mode)
-            .then(() => {
-                return process.nextTick(cb, 0);
-            })
-            .catch(err => {
-                if (err instanceof FSError) {
-                    return process.nextTick(cb, err.errno);
-                } else {
-                    return process.nextTick(cb, Fuse.EFAULT);
-                }
-            });
-
-    },
-    rename:(src, dest, cb)=>{
-        console.log('I>rename(%s,%s)',src,dest);
-        fuseops
-            .rename(src,dest)
+            .mkdir(path, mode)
             .then(() => {
                 return process.nextTick(cb, 0);
             })
@@ -159,8 +147,23 @@ const ops = {
                 }
             });
     },
-    rmdir:(pathstr,cb)=>{
-        console.log('I>rmdir(%s)',pathstr);
+    rename: (src, dest, cb) => {
+        console.log('I>rename(%s,%s)', src, dest);
+        fuseops
+            .rename(src, dest)
+            .then(() => {
+                return process.nextTick(cb, 0);
+            })
+            .catch(err => {
+                if (err instanceof FSError) {
+                    return process.nextTick(cb, err.errno);
+                } else {
+                    return process.nextTick(cb, Fuse.EFAULT);
+                }
+            });
+    },
+    rmdir: (pathstr, cb) => {
+        console.log('I>rmdir(%s)', pathstr);
         fuseops
             .rmdir(pathstr)
             .then(() => {
@@ -173,10 +176,84 @@ const ops = {
                     return process.nextTick(cb, Fuse.EFAULT);
                 }
             });
-    }
+    },
+    write: (path, fd, buffer, length, position, cb) => {
+        /**
+         * @type {Buffer}
+         */
+        const mybuf = buffer;
+
+        console.log('I>write', fd, buffer, length, position);
+        fuseops
+            .write(fd, buffer, length, position, cb)
+            .then(res => {
+                console.log('wrote', res);
+                return process.nextTick(cb, res);
+            })
+            .catch(err => {
+                if (err instanceof FSError) {
+                    return process.nextTick(cb, err.errno);
+                } else {
+                    return process.nextTick(cb, Fuse.EFAULT);
+                }
+            });
+        // return process.nextTick(cb, 0);
+    },
+    utimens: (path, atime, mtime, cb) => {
+        console.log('I>newtime', path, atime, mtime);
+        return cb(0);
+    },
+    unlink: (path, cb) => {
+        console.log('I>unlink', path);
+
+        fuseops
+            .unlink(path)
+            .then(() => {
+                return process.nextTick(cb, 0);
+            })
+            .catch(err => {
+                if (err instanceof FSError) {
+                    return process.nextTick(cb, err.errno);
+                } else {
+                    return process.nextTick(cb, Fuse.EFAULT);
+                }
+            });
+    },
+    flush: (path, fd, cb) => {
+        //foobar
+        return cb(0);
+    },
+    releasedir: (path, fd, cb) => {
+        return cb(0);
+    },
+    opendir: (path, flags, cb) => {
+        return cb(0, 42);
+    },
+    // getxattr: (path, name, position, cb) => {
+    //     console.log('I>getxattr', path,name);
+    //     return cb(0, '');
+    // },
+    truncate: (path, size, cb) => {
+        console.log('I>Truncate', path, size);
+        fuseops
+            .truncate(path, size)
+            .then(() => {
+                return process.nextTick(cb, 0);
+            })
+            .catch(err => {
+                if (err instanceof FSError) {
+                    return process.nextTick(cb, err.errno);
+                } else {
+                    return process.nextTick(cb, Fuse.EFAULT);
+                }
+            });
+    },
 };
 
-const fuse = new Fuse('./mnt', ops, { debug: process.env.FUSEDEBUG==='true', displayFolder: true });
+const fuse = new Fuse('./mnt', ops, {
+    debug: process.env.FUSEDEBUG === 'true',
+    displayFolder: true,
+});
 
 /**
  * Mount FUSE

@@ -128,9 +128,19 @@ const ops = {
         // return process.nextTick(cb,Fuse.EHOSTUNREACH)
     },
     utimens: (path, atime, mtime, cb) => {
+        console.log('I>utime',path,atime,mtime);
+        fuseops.utimens(path,atime,mtime).then(()=>{
+            return cb(0);
+        }).catch(err=>{
+            if (err instanceof FSError) {
+                return process.nextTick(cb, err.errno);
+            } else {
+                return process.nextTick(cb, Fuse.EFAULT);
+            }
+        })
         //dummy function
-        console.log('I>changetimes(faking)', path, atime, mtime);
-        return process.nextTick(cb, 0);
+        // console.log('I>changetimes(faking)', path, atime, mtime,typeof atime, typeof mtime);
+        // return process.nextTick(cb, 0);
     },
     mkdir: (path, mode, cb) => {
         console.log('I>mkdir(%s,%d)', path, mode);
@@ -198,10 +208,6 @@ const ops = {
                 }
             });
         // return process.nextTick(cb, 0);
-    },
-    utimens: (path, atime, mtime, cb) => {
-        console.log('I>newtime', path, atime, mtime);
-        return cb(0);
     },
     unlink: (path, cb) => {
         console.log('I>unlink', path);
@@ -275,7 +281,7 @@ fuseops
             process.exit(1);
             // return process.nextTick(cb, err.errno);
         } else {
-            console.log('E>could not mount, general error:', err);
+            console.log('E>could not mount, general error:',  err.message || err.name || err.msg || err);
             process.exit(1);
             // return process.nextTick(cb, Fuse.EFAULT);
         }

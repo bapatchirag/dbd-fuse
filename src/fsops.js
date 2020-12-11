@@ -66,12 +66,12 @@ async function getattr(path) {
         const response = await axios.post(baseURL + '/api/general/getattr', {
             path: path,
         });
-        // console.log(response.data);
-        const { type, permissions, size } = response.data.stat;
+        // console.log('MyDate',(response.data.stat.mtime&& new Date(response.data.stat.mtime))|| new Date());
+        const { type, permissions, size, } = response.data.stat;
         return {
-            mtime: new Date(),
-            atime: new Date(),
-            ctime: new Date(),
+            mtime: (response.data.stat.mtime&& new Date(response.data.stat.mtime))|| new Date(),
+            atime: (response.data.stat.atime&& new Date(response.data.stat.atime))|| new Date(),
+            ctime: (response.data.stat.ctime&& new Date(response.data.stat.ctime))|| new Date(),
             nlink: 1,
             size:
                 response.data.stat.size === undefined
@@ -168,19 +168,14 @@ async function chmod(path, mode) {
 
 /**
  * Do not include this function as an operation. This is meant to login and receive the cookie.
+ * Do not wrap with try catch
  */
 async function init() {
-    try {
-        const response = await axios.post(baseURL + '/api/auth/login', {
-            email: process.env.FUSEEMAIL,
-            pwd: process.env.FUSEPWD,
-        });
-        console.log('I>Login successful');
-    } catch (err) {
-        if ((err && err.response && err.response.status) === 403) {
-            throw new FSError('undefined perms', EPERM);
-        }
-    }
+    const response = await axios.post(baseURL + '/api/auth/login', {
+        email: process.env.FUSEEMAIL,
+        pwd: process.env.FUSEPWD,
+    });
+    console.log('I>Login successful');
 }
 
 // read a file. it will also write to the buffer buf before returning
@@ -359,7 +354,7 @@ async function write(fd, buffer, length, position) {
         // console.log('Wrote data',response.data);
         return response.data.result;
     } catch (err) {
-        console.log('I>Write error');
+        console.log('I>Write error',err);
         // need to throw errors here, so they are caught upstream by the readdir function
         if ((err && err.response && err.response.status) === 404) {
             throw new FSError('Folder not found');
@@ -441,6 +436,44 @@ async function truncate(path, size) {
     }
 }
 
+
+/**
+ * change time
+ * @param {string} path 
+ * @param {number} atime 
+ * @param {number} mtime 
+ */
+async function utimens(path,atime,mtime) {
+    try {
+        const response = await axios.post(baseURL + '/api/general/utime', {
+            path,
+            atime,
+            mtime
+        });
+        console.log(response.data);
+        const change = parseInt(response.data.result);
+        // if (change < 1) {
+        //     throw new FSError('no perm', EPERM);
+        // }
+        return change;
+    } catch (err) {
+        console.log(err.response.status);
+        // need to throw errors here, so they are caught upstream by the readdir function
+        if ((err && err.response && err.response.status) === 404) {
+            throw new FSError('Folder not found');
+        } else if ((err && err.response && err.response.status) === 403) {
+            throw new FSError('No perms', EPERM);
+        } else if ((err && err.response && err.response.status) === 401) {
+            throw new FSError('No perms', EPERM);
+        } else {
+            console.log('E>', err.message || 'error');
+            throw new FSError('General error', ECONNREFUSED);
+            //return { ok: false, status: 'Undefined' };
+        }
+    }
+}
+
+
 /**
  * Do not include this function as an operation. This is meant to clean up the cookie and logout.
  */
@@ -469,6 +502,7 @@ module.exports = {
     rmdir,
     write,
     unlink,
+    utimens,
     truncate,
     deinit,
 };

@@ -6,7 +6,6 @@ const { config } = require('process');
 const FSError = require('./misc/FSError');
 const axios = require('axios').default;
 const axiosCookieJarSupport = require('axios-cookiejar-support').default;
-const formData = require('form-data');
 const tough = require('tough-cookie');
 const { ECONNREFUSED, EPERM } = require('fuse-native');
 

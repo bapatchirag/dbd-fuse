@@ -170,11 +170,13 @@ async function chmod(path, mode) {
 /**
  * Do not include this function as an operation. This is meant to login and receive the cookie.
  * Do not wrap with try catch
+ * @param {string} email
+ * @param {string} pwd
  */
-async function init() {
+async function init(email,pwd) {
     const response = await axios.post(baseURL + '/api/auth/login', {
-        email: process.env.FUSEEMAIL,
-        pwd: process.env.FUSEPWD,
+        email,
+        pwd,
     });
     const token = (await cookieJar.getCookieString(baseURL)).split('=')[1]
     const tokenContents = jwt.decode(token,{json:true})

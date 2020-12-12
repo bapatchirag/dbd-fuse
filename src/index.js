@@ -5,6 +5,7 @@ const path = require('path');
 const FSError = require('./misc/FSError');
 const { O_RDONLY } = require('constants');
 const fsops = require('./fsops');
+const argv = require('yargs/yargs')(process.argv.slice(2)).argv;
 
 try {
     const dotenv = require('dotenv');
@@ -13,9 +14,30 @@ try {
     console.log('I> did not set env vars');
 }
 
-// console.log(process.argv);
+/**
+ * credentials
+ */
+let creds = {
+    email: process.env.COUSCOUS_FUSEEMAIL,
+    pwd: process.env.COUSCOUS_FUSEPWD,
+    directory: process.env.COUSCOUS_DMOUNT
+};
 
-let pathToMount = process.argv[2] || './mnt';
+// console.log(argv.o)
+const arguments = argv.o||"";
+creds.directory = (argv._ && argv._[0]) ||creds.directory
+if (arguments) {
+    const args = arguments.split(',')
+    const argdiv = args.map(e=>e.split('='))
+
+    const emailbit = argdiv.find(e=>e[0]==='username')
+    const pwdbit = argdiv.find(e=>e[0]==='password')
+    creds.email = (emailbit && emailbit[1])||creds.email
+    creds.pwd = (pwdbit && pwdbit[1])||creds.pwd
+}
+
+
+// console.log(creds)
 
 const ops = {
     readdir: (path, cb) => {
@@ -261,7 +283,7 @@ const ops = {
     },
 };
 
-const fuse = new Fuse('./mnt', ops, {
+const fuse = new Fuse(creds.directory, ops, {
     debug: process.env.FUSEDEBUG === 'true',
     displayFolder: true,
 });
@@ -270,7 +292,7 @@ const fuse = new Fuse('./mnt', ops, {
  * Mount FUSE
  */
 fuseops
-    .init()
+    .init(creds.email,creds.pwd)
     .then(() => {
         fuse.mount(err => {
             if (err) {

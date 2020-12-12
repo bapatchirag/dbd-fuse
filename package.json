@@ -21,6 +21,7 @@
     "axios": "^0.21.0",
     "axios-cookiejar-support": "^1.0.1",
     "fuse-native": "^2.2.6",
+    "jsonwebtoken": "^8.5.1",
     "tough-cookie": "^4.0.0",
     "yargs": "^13.3.2"
   },

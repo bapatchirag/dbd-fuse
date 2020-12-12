@@ -19,7 +19,7 @@ let pathToMount = process.argv[2] || './mnt';
 
 const ops = {
     readdir: (path, cb) => {
-        console.log('I>readdir', path);
+        // console.log('I>readdir', path);
         fuseops
             .readdir(path)
             .then(response => {
@@ -37,13 +37,15 @@ const ops = {
             });
     },
     getattr: (path, cb) => {
-        // console.log('I>getattr', path);
+        console.log('I>getattr', path);
         fuseops
             .getattr(path)
             .then(response => {
+                // console.log(response)
                 return process.nextTick(cb, 0, response);
             })
             .catch(err => {
+                console.log('I>getattr error',path);
                 if (err instanceof FSError) {
                     return process.nextTick(cb, err.errno);
                 } else {
@@ -56,6 +58,7 @@ const ops = {
         fuseops
             .open(path, flags)
             .then(response => {
+                console.log('I>opened with fd',response)
                 return process.nextTick(cb, 0, response);
             })
             .catch(err => {
@@ -115,10 +118,11 @@ const ops = {
         console.log('I>create(%s,%d)', path, mode);
         fuseops
             .create(path, mode)
-            .then(() => {
-                return process.nextTick(cb, 0);
+            .then((val) => {
+                return process.nextTick(cb, 0,val);
             })
             .catch(err => {
+                console.log('Create threw an error')
                 if (err instanceof FSError) {
                     return process.nextTick(cb, err.errno);
                 } else {
@@ -193,7 +197,7 @@ const ops = {
          */
         const mybuf = buffer;
 
-        console.log('I>write', fd, buffer, length, position);
+        console.log('I>write',path, fd, buffer, length, position);
         fuseops
             .write(fd, buffer, length, position, cb)
             .then(res => {
@@ -227,6 +231,7 @@ const ops = {
     },
     flush: (path, fd, cb) => {
         //foobar
+        // console.log('I>flush',path);
         return cb(0);
     },
     releasedir: (path, fd, cb) => {
@@ -240,7 +245,7 @@ const ops = {
     //     return cb(0, '');
     // },
     truncate: (path, size, cb) => {
-        console.log('I>Truncate', path, size);
+        // console.log('I>Truncate', path, size);
         fuseops
             .truncate(path, size)
             .then(() => {

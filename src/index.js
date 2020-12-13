@@ -1,4 +1,11 @@
 #!/bin/env node
+
+/**
+ * @file This module accepts inputs and manages the fuse system
+ * @author Chirag Bapat
+ */
+
+
 const Fuse = require('fuse-native');
 const fuseops = require('./fsops');
 const path = require('path');

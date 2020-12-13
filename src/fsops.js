@@ -60,7 +60,7 @@ async function readdir(path) {
 };
 
 /**
- *
+ * Get information on file/folder
  * @param {string} path
  */
 async function getattr(path) {
@@ -150,6 +150,11 @@ async function close(path, fd) {
     }
 }
 
+/**
+ * Change permissions of file/folder
+ * @param {string} path path
+ * @param {path} mode new permissions
+ */
 async function chmod(path, mode) {
     try {
         const response = await axios.post(globalSettings.baseLocation + '/api/general/chmod', {
@@ -199,17 +204,26 @@ async function init(email,pwd,location) {
     globalSettings.uid = tokenContents.uid;
 }
 
-// read a file. it will also write to the buffer buf before returning
+
+/**
+ * Read a portion of a file descriptor
+ * @param {string} path path string (not used)
+ * @param {number} fd file descriptor
+ * @param {Buffer} buf Buffer to write answer to
+ * @param {number} len amount required to read
+ * @param {number} pos position to read from
+ * @returns {Promise<number>} the number of bytes read
+ */
 async function read(path, fd, buf, len, pos) {
     try {
-        console.log('tried to read', fd, len, pos);
+        // console.log('tried to read', fd, len, pos);
         const response = await axios.post(globalSettings.baseLocation + '/api/file/read', {
             fd,
             length: len,
             position: pos,
         });
         buf.write(response.data);
-        console.log('R>Size:', response.data.length);
+        // console.log('R>Size:', response.data.length);
         return response.data.length;
     } catch (err) {
         // console.log(err.response);
@@ -392,7 +406,7 @@ async function write(fd, buffer, length, position) {
 }
 
 /**
- *
+ * Unlink/Remove File
  * @param {string} path
  */
 async function unlink(path) {
@@ -424,7 +438,7 @@ async function unlink(path) {
 }
 
 /**
- *
+ *  Truncate a file to a specified size
  * @param {string} path
  * @param {number} size
  */
@@ -459,7 +473,7 @@ async function truncate(path, size) {
 
 
 /**
- * change time
+ * change times on a file/folder
  * @param {string} path 
  * @param {number} atime 
  * @param {number} mtime 
@@ -496,7 +510,8 @@ async function utimens(path,atime,mtime) {
 
 
 /**
- * Do not include this function as an operation. This is meant to clean up the cookie and logout.
+ * Not an operation.
+ * Cleans up cookies and logout.
  */
 async function deinit() {
     try {

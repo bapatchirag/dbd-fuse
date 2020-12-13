@@ -1,6 +1,10 @@
 //@ts-check
-// This file wraps and returns the data
-// if error, it wraps and throws the appropriate callback error
+/**
+ * @file This module wraps all requests, and returns requests.
+ * Errors are processed and returned according to the status codes received.
+ * @author Atreya Bain 
+ */
+
 
 const { config } = require('process');
 const FSError = require('./misc/FSError');

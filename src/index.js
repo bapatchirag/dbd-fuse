@@ -4,15 +4,16 @@ const fuseops = require('./fsops');
 const path = require('path');
 const FSError = require('./misc/FSError');
 const { O_RDONLY } = require('constants');
-const fsops = require('./fsops');
 const argv = require('yargs/yargs')(process.argv.slice(2)).argv;
-const {validURL}= require('./misc/urlParser')
+const {validURL}= require('./misc/urlParser');
+const assert  = require('assert');
 
 try {
     const dotenv = require('dotenv');
+    console.log('I> Set up from environment variables')
     dotenv.config();
 } catch {
-    console.log('I> did not set env vars');
+    console.log('I> did not set env vars(dotenv present or .env invalid)');
 }
 
 /**
@@ -22,12 +23,16 @@ let creds = {
     email: process.env.COUSCOUS_FUSEEMAIL,
     pwd: process.env.COUSCOUS_FUSEPWD,
     directory: process.env.COUSCOUS_DMOUNT,
-    url: validURL(process.env.COUSCOUS_URL)
+    url: process.env.COUSCOUS_URL
 };
 
 // console.log(argv.o)
 const usableArgs = argv.o||"";
 creds.directory = (argv._ && argv._[0]) ||creds.directory
+
+// perform an undefined check
+if(creds.directory===undefined){throw new Error('Expected a directory to mount')}
+
 if (usableArgs) {
     const args = usableArgs.split(',')
     const argdiv = args.map(e=>e.split('='))
@@ -37,12 +42,21 @@ if (usableArgs) {
     const urlbit = argdiv.find(e=>e[0]==='url')
     creds.email = (emailbit && emailbit[1])||creds.email
     creds.pwd = (pwdbit && pwdbit[1])||creds.pwd
-    creds.url = (urlbit && validURL(urlbit[1]))|| creds.url
+    creds.url = (urlbit && validURL(urlbit[1]))|| (creds.url&& validURL(creds.url))
 }
 
+//assert that they are there
+assert(creds.directory,'Expected directory');
+assert(creds.email,'Expected email');
+assert(creds.pwd,'Expected password');
+// not required but a sanity check is never bad
+assert(creds.url,'Expected url');
 
 // console.log(creds)
 
+/**
+ * The filesystem operation structure
+ */
 const ops = {
     readdir: (path, cb) => {
         // console.log('I>readdir', path);
@@ -287,8 +301,11 @@ const ops = {
     },
 };
 
+/**
+ * Fuse handler
+ */
 const fuse = new Fuse(creds.directory, ops, {
-    debug: process.env.FUSEDEBUG === 'true',
+    debug: process.env.COUSCOUS_FUSEDEBUG === 'true',
     displayFolder: true,
 });
 

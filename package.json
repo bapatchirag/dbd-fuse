@@ -7,7 +7,8 @@
     "test": "mocha tests",
     "dev": "node --inspect-brk src",
     "start": "./src/index.js",
-    "unmount": "fusermount -u mnt"
+    "unmount": "fusermount -u mnt",
+    "doc":"jsdoc src/index.js src/fsops.js  src/misc"
   },
   "prettier": {
     "tabWidth": 4,

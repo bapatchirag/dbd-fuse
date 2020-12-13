@@ -9,22 +9,19 @@ const axiosCookieJarSupport = require('axios-cookiejar-support').default;
 const tough = require('tough-cookie');
 const { ECONNREFUSED, EACCES,EPERM } = require('fuse-native');
 const jwt = require('jsonwebtoken')
+
 // axios does not store cookies, we have to do it :). Using cookie jar
 axiosCookieJarSupport(axios);
 axios.defaults.withCredentials = true;
 const cookieJar = new tough.CookieJar();
 axios.defaults.jar = cookieJar;
 
-const globalSettings = {uid:null}
-// TODO replace with config
 
-const baseURL = 'http://localhost:8081';
-// axios.create cannot have have ports mentioned
-// const axiosConfig = axios.create({
-//     baseURL: 'http://localhost:8081/',
-//     timeout: 400,
-//     timeoutErrorMessage: 'Request timed out',
-// });
+/**
+ * global Settings configuration
+ */
+const globalSettings = {uid:null,baseLocation:null}
+
 
 /**
  * @typedef {{ok:boolean, status:string, data:Object}} response
@@ -35,9 +32,9 @@ const baseURL = 'http://localhost:8081';
  * @param {string} path Directory path to be read
  * @returns {Promise<{contents:string[]}>} Response object
  */
-const readdir = async path => {
+async function readdir(path) {
     try {
-        const response = await axios.post(baseURL + '/api/folder/read', {
+        const response = await axios.post(globalSettings.baseLocation + '/api/folder/read', {
             path: path,
         });
 
@@ -64,7 +61,7 @@ const readdir = async path => {
  */
 async function getattr(path) {
     try {
-        const response = await axios.post(baseURL + '/api/general/getattr', {
+        const response = await axios.post(globalSettings.baseLocation + '/api/general/getattr', {
             path: path,
         });
         // console.log('MyDate',(response.data.stat.mtime&& new Date(response.data.stat.mtime))|| new Date());
@@ -96,9 +93,14 @@ async function getattr(path) {
     }
 }
 
+/**
+ * open file and return fd
+ * @param {string} path location to readdir
+ * @param {number} flags mode to open in
+ */
 async function open(path, flags) {
     try {
-        const response = await axios.post(baseURL + '/api/file/open', {
+        const response = await axios.post(globalSettings.baseLocation + '/api/file/open', {
             path,
             operation: flags,
         });
@@ -119,9 +121,14 @@ async function open(path, flags) {
     }
 }
 
+/**
+ * close file descriptor and return result
+ * @param {string} path location
+ * @param {number} fd  file descriptor
+ */
 async function close(path, fd) {
     try {
-        const response = await axios.post(baseURL + '/api/file/release', {
+        const response = await axios.post(globalSettings.baseLocation + '/api/file/release', {
             path,
             fd,
         });
@@ -141,7 +148,7 @@ async function close(path, fd) {
 
 async function chmod(path, mode) {
     try {
-        const response = await axios.post(baseURL + '/api/general/chmod', {
+        const response = await axios.post(globalSettings.baseLocation + '/api/general/chmod', {
             path,
             permissions: mode,
         });
@@ -172,13 +179,16 @@ async function chmod(path, mode) {
  * Do not wrap with try catch
  * @param {string} email
  * @param {string} pwd
+ * @param {string} location
  */
-async function init(email,pwd) {
-    const response = await axios.post(baseURL + '/api/auth/login', {
+async function init(email,pwd,location) {
+    //set the url
+    globalSettings.baseLocation = location;
+    const response = await axios.post(globalSettings.baseLocation + '/api/auth/login', {
         email,
         pwd,
     });
-    const token = (await cookieJar.getCookieString(baseURL)).split('=')[1]
+    const token = (await cookieJar.getCookieString(globalSettings.baseLocation)).split('=')[1]
     const tokenContents = jwt.decode(token,{json:true})
     // console.log('tokenContents);
     console.log('I>Login successful with token',token);
@@ -189,7 +199,7 @@ async function init(email,pwd) {
 async function read(path, fd, buf, len, pos) {
     try {
         console.log('tried to read', fd, len, pos);
-        const response = await axios.post(baseURL + '/api/file/read', {
+        const response = await axios.post(globalSettings.baseLocation + '/api/file/read', {
             fd,
             length: len,
             position: pos,
@@ -221,7 +231,7 @@ async function read(path, fd, buf, len, pos) {
  */
 async function create(path, mode) {
     try {
-        const response = await axios.post(baseURL + '/api/file/create', {
+        const response = await axios.post(globalSettings.baseLocation + '/api/file/create', {
             path,
             permissions: mode,
         });
@@ -254,7 +264,7 @@ async function create(path, mode) {
  */
 async function mkdir(path, mode) {
     try {
-        const response = await axios.post(baseURL + '/api/folder/create', {
+        const response = await axios.post(globalSettings.baseLocation + '/api/folder/create', {
             path,
             permissions: mode,
         });
@@ -287,7 +297,7 @@ async function mkdir(path, mode) {
  */
 async function rename(src, dest) {
     try {
-        const response = await axios.post(baseURL + '/api/general/rename', {
+        const response = await axios.post(globalSettings.baseLocation + '/api/general/rename', {
             src,
             dest,
         });
@@ -318,7 +328,7 @@ async function rename(src, dest) {
  */
 async function rmdir(pathStr) {
     try {
-        const response = await axios.post(baseURL + '/api/folder/remove', {
+        const response = await axios.post(globalSettings.baseLocation + '/api/folder/remove', {
             path: pathStr,
         });
         const change = parseInt(response.data.changed);
@@ -352,7 +362,7 @@ async function rmdir(pathStr) {
  */
 async function write(fd, buffer, length, position) {
     try {
-        const response = await axios.post(baseURL + '/api/file/write', {
+        const response = await axios.post(globalSettings.baseLocation + '/api/file/write', {
             fd,
             buffer: [...buffer],
             length,
@@ -383,7 +393,7 @@ async function write(fd, buffer, length, position) {
  */
 async function unlink(path) {
     try {
-        const response = await axios.post(baseURL + '/api/file/unlink', {
+        const response = await axios.post(globalSettings.baseLocation + '/api/file/unlink', {
             path,
         });
         console.log(response.data);
@@ -416,7 +426,7 @@ async function unlink(path) {
  */
 async function truncate(path, size) {
     try {
-        const response = await axios.post(baseURL + '/api/file/truncate', {
+        const response = await axios.post(globalSettings.baseLocation + '/api/file/truncate', {
             path,
             size,
         });
@@ -452,7 +462,7 @@ async function truncate(path, size) {
  */
 async function utimens(path,atime,mtime) {
     try {
-        const response = await axios.post(baseURL + '/api/general/utime', {
+        const response = await axios.post(globalSettings.baseLocation + '/api/general/utime', {
             path,
             atime,
             mtime
@@ -486,7 +496,7 @@ async function utimens(path,atime,mtime) {
  */
 async function deinit() {
     try {
-        const response = await axios.post(baseURL + '/api/auth/logout', {
+        const response = await axios.post(globalSettings.baseLocation + '/api/auth/logout', {
             email: process.env.FUSEEMAIL,
             pwd: process.env.FUSEPWD,
         });

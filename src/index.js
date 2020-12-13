@@ -6,6 +6,7 @@ const FSError = require('./misc/FSError');
 const { O_RDONLY } = require('constants');
 const fsops = require('./fsops');
 const argv = require('yargs/yargs')(process.argv.slice(2)).argv;
+const {validURL}= require('./misc/urlParser')
 
 try {
     const dotenv = require('dotenv');
@@ -15,25 +16,28 @@ try {
 }
 
 /**
- * credentials
+ * credentials for processing
  */
 let creds = {
     email: process.env.COUSCOUS_FUSEEMAIL,
     pwd: process.env.COUSCOUS_FUSEPWD,
-    directory: process.env.COUSCOUS_DMOUNT
+    directory: process.env.COUSCOUS_DMOUNT,
+    url: validURL(process.env.COUSCOUS_URL)
 };
 
 // console.log(argv.o)
-const arguments = argv.o||"";
+const usableArgs = argv.o||"";
 creds.directory = (argv._ && argv._[0]) ||creds.directory
-if (arguments) {
-    const args = arguments.split(',')
+if (usableArgs) {
+    const args = usableArgs.split(',')
     const argdiv = args.map(e=>e.split('='))
 
     const emailbit = argdiv.find(e=>e[0]==='username')
     const pwdbit = argdiv.find(e=>e[0]==='password')
+    const urlbit = argdiv.find(e=>e[0]==='url')
     creds.email = (emailbit && emailbit[1])||creds.email
     creds.pwd = (pwdbit && pwdbit[1])||creds.pwd
+    creds.url = (urlbit && validURL(urlbit[1]))|| creds.url
 }
 
 
@@ -292,7 +296,7 @@ const fuse = new Fuse(creds.directory, ops, {
  * Mount FUSE
  */
 fuseops
-    .init(creds.email,creds.pwd)
+    .init(creds.email,creds.pwd,creds.url)
     .then(() => {
         fuse.mount(err => {
             if (err) {

@@ -1,8 +1,9 @@
 # dbd-fuse
 
+Mounts a filesystem designed under [Couscous](https://github.com/chrisvrose/couscous-next)
+
 ## Usage
 
 ```sh
-mkdir -p mnt
-node src
+node src -o username=
 ```

@@ -17,10 +17,10 @@ const assert  = require('assert');
 
 try {
     const dotenv = require('dotenv');
-    console.log('I> Set up from environment variables')
+    //console.log('I> Set up from environment variables')
     dotenv.config();
 } catch {
-    console.log('I> did not set env vars(dotenv present or .env invalid)');
+    //console.log('I> did not set env vars(dotenv present or .env invalid)');
 }
 
 /**
@@ -33,7 +33,7 @@ let creds = {
     url: process.env.COUSCOUS_URL
 };
 
-// console.log(argv.o)
+// //console.log(argv.o)
 const usableArgs = argv.o||"";
 creds.directory = (argv._ && argv._[0]) ||creds.directory
 
@@ -59,14 +59,14 @@ assert(creds.pwd,'Expected password');
 // not required but a sanity check is never bad
 assert(creds.url,'Expected url');
 
-// console.log(creds)
+// //console.log(creds)
 
 /**
  * The filesystem operation structure
  */
 const ops = {
     readdir: (path, cb) => {
-        // console.log('I>readdir', path);
+        // //console.log('I>readdir', path);
         fuseops
             .readdir(path)
             .then(response => {
@@ -79,20 +79,20 @@ const ops = {
                 } else {
                     return process.nextTick(cb, Fuse.EFAULT);
                 }
-                // console.log(err)
+                // //console.log(err)
                 // return process.nextTick(cb, Fuse.ENOENT)
             });
     },
     getattr: (path, cb) => {
-        console.log('I>getattr', path);
+        //console.log('I>getattr', path);
         fuseops
             .getattr(path)
             .then(response => {
-                // console.log(response)
+                // //console.log(response)
                 return process.nextTick(cb, 0, response);
             })
             .catch(err => {
-                console.log('I>getattr error',path);
+                //console.log('I>getattr error',path);
                 if (err instanceof FSError) {
                     return process.nextTick(cb, err.errno);
                 } else {
@@ -101,11 +101,11 @@ const ops = {
             });
     },
     open: (path, flags, cb) => {
-        console.log('I>open(%s, %d)', path, flags);
+        //console.log('I>open(%s, %d)', path, flags);
         fuseops
             .open(path, flags)
             .then(response => {
-                console.log('I>opened with fd',response)
+                //console.log('I>opened with fd',response)
                 return process.nextTick(cb, 0, response);
             })
             .catch(err => {
@@ -117,7 +117,7 @@ const ops = {
             });
     },
     release: (path, fd, cb) => {
-        console.log('I>close(%s, %d)', path, fd);
+        //console.log('I>close(%s, %d)', path, fd);
         fuseops
             .close(path, fd)
             .then(() => {
@@ -132,7 +132,7 @@ const ops = {
             });
     },
     chmod: (path, mode, cb) => {
-        console.log('I>chmod(%s, %d)', path, mode);
+        //console.log('I>chmod(%s, %d)', path, mode);
         fuseops
             .chmod(path, mode)
             .then(() => {
@@ -147,7 +147,7 @@ const ops = {
             });
     },
     read: (path, fd, buf, len, pos, cb) => {
-        console.log('I>read(%s,%d)', path, fd);
+        console.log('I>read(%s,%d)', path, fd,len,pos);
         fuseops
             .read(path, fd, buf, len, pos)
             .then(e => {
@@ -162,14 +162,14 @@ const ops = {
             });
     },
     create: (path, mode, cb) => {
-        console.log('I>create(%s,%d)', path, mode);
+        //console.log('I>create(%s,%d)', path, mode);
         fuseops
             .create(path, mode)
             .then((val) => {
                 return process.nextTick(cb, 0,val);
             })
             .catch(err => {
-                console.log('Create threw an error')
+                //console.log('Create threw an error')
                 if (err instanceof FSError) {
                     return process.nextTick(cb, err.errno);
                 } else {
@@ -179,7 +179,7 @@ const ops = {
         // return process.nextTick(cb,Fuse.EHOSTUNREACH)
     },
     utimens: (path, atime, mtime, cb) => {
-        console.log('I>utime',path,atime,mtime);
+        //console.log('I>utime',path,atime,mtime);
         fuseops.utimens(path,atime,mtime).then(()=>{
             return cb(0);
         }).catch(err=>{
@@ -190,11 +190,11 @@ const ops = {
             }
         })
         //dummy function
-        // console.log('I>changetimes(faking)', path, atime, mtime,typeof atime, typeof mtime);
+        // //console.log('I>changetimes(faking)', path, atime, mtime,typeof atime, typeof mtime);
         // return process.nextTick(cb, 0);
     },
     mkdir: (path, mode, cb) => {
-        console.log('I>mkdir(%s,%d)', path, mode);
+        //console.log('I>mkdir(%s,%d)', path, mode);
         fuseops
             .mkdir(path, mode)
             .then(() => {
@@ -209,7 +209,7 @@ const ops = {
             });
     },
     rename: (src, dest, cb) => {
-        console.log('I>rename(%s,%s)', src, dest);
+        //console.log('I>rename(%s,%s)', src, dest);
         fuseops
             .rename(src, dest)
             .then(() => {
@@ -224,7 +224,7 @@ const ops = {
             });
     },
     rmdir: (pathstr, cb) => {
-        console.log('I>rmdir(%s)', pathstr);
+        //console.log('I>rmdir(%s)', pathstr);
         fuseops
             .rmdir(pathstr)
             .then(() => {
@@ -244,11 +244,11 @@ const ops = {
          */
         const mybuf = buffer;
 
-        console.log('I>write',path, fd, buffer, length, position);
+        //console.log('I>write',path, fd, length, position);
         fuseops
             .write(fd, buffer, length, position, cb)
             .then(res => {
-                console.log('wrote', res);
+                //console.log('wrote', res);
                 return process.nextTick(cb, res);
             })
             .catch(err => {
@@ -261,7 +261,7 @@ const ops = {
         // return process.nextTick(cb, 0);
     },
     unlink: (path, cb) => {
-        console.log('I>unlink', path);
+        // console.log('I>unlink', path);
 
         fuseops
             .unlink(path)
@@ -288,7 +288,7 @@ const ops = {
         return cb(0, 42);
     },
     // getxattr: (path, name, position, cb) => {
-    //     console.log('I>getxattr', path,name);
+    //     //console.log('I>getxattr', path,name);
     //     return cb(0, '');
     // },
     truncate: (path, size, cb) => {
@@ -327,16 +327,16 @@ fuseops
                 throw err;
             }
 
-            console.log('FS mounted at ' + fuse.mnt);
+            //console.log('FS mounted at ' + fuse.mnt);
         });
     })
     .catch(err => {
         if (err instanceof FSError) {
-            console.log('could not mount with error ', err.errno);
+            //console.log('could not mount with error ', err.errno);
             process.exit(1);
             // return process.nextTick(cb, err.errno);
         } else {
-            console.log('E>could not mount, general error:',  err.message || err.name || err.msg || err);
+            //console.log('E>could not mount, general error:',  err.message || err.name || err.msg || err);
             process.exit(1);
             // return process.nextTick(cb, Fuse.EFAULT);
         }
@@ -348,14 +348,14 @@ fuseops
 process.once('SIGINT', () => {
     fuse.unmount(err => {
         if (err) {
-            console.log(
-                '\nFS at ' + fuse.mnt + ' could not be unmounted: ' + err
-            );
+            //console.log(
+                // '\nFS at ' + fuse.mnt + ' could not be unmounted: ' + err
+            // );
             return;
         }
         fuseops.deinit().then(() => {
             console.log('I>Logged out');
         });
-        console.log('\nFS at ' + fuse.mnt + ' successfully unmounted');
+        //console.log('\nFS at ' + fuse.mnt + ' successfully unmounted');
     });
 });

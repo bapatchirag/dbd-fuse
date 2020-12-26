@@ -11,6 +11,7 @@ class FSError extends Error {
      */
     constructor(message, errno = ENOENT) {
         super(message);
+        console.log("E>FS ERROR",message,errno);
         this._errno = errno;
     }
 

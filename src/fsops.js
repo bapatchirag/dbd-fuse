@@ -222,9 +222,13 @@ async function read(path, fd, buf, len, pos) {
             length: len,
             position: pos,
         });
-        buf.write(response.data);
-        // console.log('R>Size:', response.data.length);
-        return response.data.length;
+        // Buffer.from(response.data.result)
+        Buffer.from(response.data.result).copy(buf);
+        // buf.copy()
+        // buf.write();
+        // console.log("i> Read data",response.data.result.length)
+        // console.log('R>Size:', response.data.result.length);
+        return response.data.result.length;
     } catch (err) {
         // console.log(err.response);
         // need to throw errors here, so they are caught upstream by the readdir function

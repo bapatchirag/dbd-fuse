@@ -14,6 +14,7 @@ const { O_RDONLY } = require('constants');
 const argv = require('yargs/yargs')(process.argv.slice(2)).argv;
 const {validURL}= require('./misc/urlParser');
 const assert  = require('assert');
+const { showCompletionScript } = require('yargs');
 
 try {
     const dotenv = require('dotenv');
@@ -35,21 +36,22 @@ let creds = {
 
 // //console.log(argv.o)
 const usableArgs = argv.o||"";
-creds.directory = (argv._ && argv._[0]) ||creds.directory
+creds.directory = (argv._ && argv._[1]) ||creds.directory
+const urlbit = (argv._ && argv._[0]) ||creds.url
+console.log(urlbit)
+creds.url = (urlbit && validURL(urlbit))|| (creds.url&& validURL(creds.url))
 
 // perform an undefined check
-if(creds.directory===undefined){throw new Error('Expected a directory to mount')}
+// if(creds.directory===undefined){throw new Error('Expected a directory to mount')}
 
 if (usableArgs) {
     const args = usableArgs.split(',')
     const argdiv = args.map(e=>e.split('='))
-
+    
     const emailbit = argdiv.find(e=>e[0]==='username')
     const pwdbit = argdiv.find(e=>e[0]==='password')
-    const urlbit = argdiv.find(e=>e[0]==='url')
     creds.email = (emailbit && emailbit[1])||creds.email
     creds.pwd = (pwdbit && pwdbit[1])||creds.pwd
-    creds.url = (urlbit && validURL(urlbit[1]))|| (creds.url&& validURL(creds.url))
 }
 
 //assert that they are there
@@ -60,7 +62,8 @@ assert(creds.pwd,'Expected password');
 assert(creds.url,'Expected url');
 
 // //console.log(creds)
-
+// console.log('I>result',creds)
+// assert(false)
 /**
  * The filesystem operation structure
  */
@@ -336,7 +339,7 @@ fuseops
             process.exit(1);
             // return process.nextTick(cb, err.errno);
         } else {
-            //console.log('E>could not mount, general error:',  err.message || err.name || err.msg || err);
+            console.log('E>could not mount, general error:',  err.message || err.name || err.msg || err);
             process.exit(1);
             // return process.nextTick(cb, Fuse.EFAULT);
         }
@@ -348,9 +351,9 @@ fuseops
 process.once('SIGINT', () => {
     fuse.unmount(err => {
         if (err) {
-            //console.log(
-                // '\nFS at ' + fuse.mnt + ' could not be unmounted: ' + err
-            // );
+            console.log(
+                '\nFS at ' + fuse.mnt + ' could not be unmounted: ' + err
+            );
             return;
         }
         fuseops.deinit().then(() => {

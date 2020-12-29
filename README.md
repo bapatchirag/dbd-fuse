@@ -5,13 +5,17 @@ Mounts a filesystem designed under [Couscous](https://github.com/chrisvrose/cous
 ## Usage
 
 ```sh
-node src ./mnt -o username=foo@foo.bar,password=mypassword,url=https://localhost:8080/
+node src https://localhost:8080 ./mnt -o username=foo@foo.bar,password=mypassword
 
 # OR (mount specified)
 node src ./mnt
 
 # OR (all environment variables)
 npm start
+
+
+# need npm link first
+mount -t fuse.tamarillo http://localhost:8081 ./mnt/ -o user,username=foo@bar.baz,password=password
 ```
 
 If your password contains a comma(?), it should be passed as an environment variable.

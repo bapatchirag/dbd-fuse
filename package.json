@@ -3,10 +3,15 @@
   "version": "0.0.1",
   "description": "A FUSE wrapper for filesystem",
   "main": "src/index.js",
+  "bin": {
+    "tamarillo": "./src/index.js"
+  },
   "scripts": {
     "test": "mocha tests",
     "dev": "node --inspect-brk src",
-    "start": "./src/index.js"
+    "start": "./src/index.js",
+    "unmount": "fusermount -u mnt",
+    "doc": "jsdoc src/index.js src/fsops.js  src/misc -R README.md"
   },
   "prettier": {
     "tabWidth": 4,
@@ -20,6 +25,7 @@
     "axios": "^0.21.0",
     "axios-cookiejar-support": "^1.0.1",
     "fuse-native": "^2.2.6",
+    "jsonwebtoken": "^8.5.1",
     "tough-cookie": "^4.0.0",
     "yargs": "^13.3.2"
   },
